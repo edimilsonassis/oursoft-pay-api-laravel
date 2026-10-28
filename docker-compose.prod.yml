@@ -1,0 +1,83 @@
+# Implantação autônoma do OurSoft Pay (servidor próprio).
+# Uso: cp .env.example .env  →  preencher APP_KEY, DB_* e MYSQL_*  →  docker compose -f docker-compose.prod.yml up -d --build
+# Requer uma rede externa do Traefik (infra_traefik_network) com certresolver `letsencrypt`.
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: dockerfile.prod
+  image: oursoft-pay:latest
+  restart: unless-stopped
+  env_file: .env
+  volumes:
+    - pay_storage:/app/storage
+  depends_on:
+    mysql:
+      condition: service_healthy
+  networks:
+    - pay_network
+
+services:
+  app:
+    <<: *app
+    container_name: oursoft-pay-app
+    environment:
+      RUN_MIGRATIONS: "true"
+    networks:
+      - pay_network
+      - infra_traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=infra_traefik_network"
+      - "traefik.http.services.oursoft-pay.loadbalancer.server.port=80"
+      - "traefik.http.routers.oursoft-pay.rule=Host(`pay.oursoft.com.br`)"
+      - "traefik.http.routers.oursoft-pay.entrypoints=web"
+      - "traefik.http.routers.oursoft-pay.middlewares=oursoft-pay-https"
+      - "traefik.http.middlewares.oursoft-pay-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.oursoft-pay-https.redirectscheme.permanent=true"
+      - "traefik.http.routers.oursoft-pay-secure.rule=Host(`pay.oursoft.com.br`)"
+      - "traefik.http.routers.oursoft-pay-secure.entrypoints=websecure"
+      - "traefik.http.routers.oursoft-pay-secure.tls=true"
+      - "traefik.http.routers.oursoft-pay-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.oursoft-pay-secure.service=oursoft-pay"
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    <<: *app
+    container_name: oursoft-pay-worker
+    command: ["php", "artisan", "queue:work", "--tries=1", "--timeout=120", "--max-time=3600"]
+
+  scheduler:
+    <<: *app
+    container_name: oursoft-pay-scheduler
+    command: ["php", "artisan", "schedule:work"]
+
+  mysql:
+    image: mysql:8.0
+    container_name: oursoft-pay-mysql
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - pay_mysql_data:/var/lib/mysql
+    networks:
+      - pay_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  pay_storage:
+  pay_mysql_data:
+
+networks:
+  pay_network:
+    driver: bridge
+  infra_traefik_network:
+    external: true
