@@ -20,4 +20,9 @@ class ProviderManager implements ProviderRegistry
             Provider::Sicoob => SicoobProvider::class,
         });
     }
+
+    public function all(): array
+    {
+        return array_map(fn (Provider $provider) => $this->get($provider), Provider::cases());
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Domain\Payments\Contracts;
 
 use App\Domain\Payments\Data\CardData;
 use App\Domain\Payments\Data\ProviderCharge;
+use App\Domain\Payments\Data\ProviderField;
 use App\Domain\Payments\Data\ProviderRefund;
 use App\Domain\Payments\Enums\PaymentMethod;
 use App\Domain\Payments\Enums\Provider;
@@ -19,6 +20,16 @@ interface PaymentProvider
 {
     public function name(): Provider;
 
+    /** Nome do banco para exibição. */
+    public function label(): string;
+
+    /**
+     * Todos os métodos que o banco oferece (independente da configuração da conta).
+     *
+     * @return list<PaymentMethod>
+     */
+    public function methods(): array;
+
     /**
      * Métodos que o banco suporta e que a conta está configurada para usar.
      *
@@ -26,11 +37,13 @@ interface PaymentProvider
      */
     public function supportedMethods(ProviderAccount $account): array;
 
-    /** Regras de validação de `credentials` ao cadastrar/atualizar uma conta. */
-    public function credentialRules(): array;
-
-    /** Regras de validação de `settings` ao cadastrar/atualizar uma conta. */
-    public function settingsRules(): array;
+    /**
+     * Campos de `credentials` e `settings` da conta: geram as regras de validação e o
+     * catálogo `GET /v1/providers`.
+     *
+     * @return list<ProviderField>
+     */
+    public function fields(): array;
 
     public function createCharge(ProviderAccount $account, Payment $payment, ?CardData $card = null): ProviderCharge;
 

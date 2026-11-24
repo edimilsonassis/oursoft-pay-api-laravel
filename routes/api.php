@@ -4,12 +4,15 @@ use App\Http\Controllers\ProviderWebhookController;
 use App\Http\Controllers\V1\AccountController;
 use App\Http\Controllers\V1\ClientController;
 use App\Http\Controllers\V1\PaymentController;
+use App\Http\Controllers\V1\ProviderController;
 use App\Http\Middleware\AuthenticateApiKey;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware([AuthenticateApiKey::class, 'throttle:api'])->group(function () {
     Route::get('me', [ClientController::class, 'show']);
     Route::patch('me', [ClientController::class, 'update']);
+
+    Route::get('providers', [ProviderController::class, 'index']);
 
     Route::get('accounts', [AccountController::class, 'index']);
     Route::post('accounts', [AccountController::class, 'store']);

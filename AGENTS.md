@@ -16,8 +16,11 @@ nada do CFC: ele é só um cliente via chave de API.
   passa por `ApplyProviderChargeAction`, que grava, registra o evento e dispara o webhook
   do cliente.
 - `app/Http`: controllers finos, `FormRequest` → DTO, presenters para o JSON.
-- Novo banco: criar um `XProvider extends AbstractProvider` + gateways, adicionar o caso
-  no enum `Provider` e no `ProviderManager`, e cobrir com testes usando `Http::fake`.
+- Novo banco: criar um `XProvider extends AbstractProvider` + gateways (com `label()`,
+  `methods()` e `fields()`), adicionar o caso no enum `Provider` e no `ProviderManager`, e
+  cobrir com testes usando `Http::fake`. `fields()` (`ProviderField`) é a fonte única da
+  validação da conta e do catálogo `GET /v1/providers`, que os clientes usam para montar o
+  formulário: um banco novo não exige mudança nos clientes.
 
 ## Regras
 

@@ -55,6 +55,15 @@ Respostas de sucesso: `{ "data": … }`. Erros: `{ "error": { "code", "message",
 | `provider_error` | 502 | o banco recusou ou falhou (`provider`, `provider_status`, `provider_response`) |
 | `not_found` | 404 | recurso inexistente ou de outro cliente |
 
+### Bancos
+
+`GET /v1/providers` lista os bancos suportados com `methods`, `environments` e `fields`:
+os campos de `credentials` e `settings` de cada banco (`key`, `group`, `label`, `type`
+= `text|secret|file|integer`, `required`, `required_in` = ambientes em que é obrigatório,
+`required_without` = dispensado se outro campo do grupo for enviado, `max`, `description`,
+`placeholder`, `accept`). O cliente monta o formulário de conta a partir disso; as mesmas
+definições geram a validação de `POST /v1/accounts`.
+
 ### Contas
 
 ```http

@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * Cadastro (POST) e atualização parcial (PATCH) de conta bancária.
- * As regras de `credentials.*` e `settings.*` vêm do adaptador do banco.
+ * As regras de `credentials.*` e `settings.*` vêm dos campos declarados pelo adaptador do banco.
  */
 class ProviderAccountRequest extends FormRequest
 {
@@ -36,13 +36,10 @@ class ProviderAccountRequest extends FormRequest
         ];
 
         if ($provider) {
-            $adapter = app(ProviderRegistry::class)->get($provider);
+            $environment = Environment::tryFrom((string) $this->input('environment')) ?? $existing?->environment;
 
-            foreach ($adapter->credentialRules() as $field => $fieldRules) {
-                $rules["credentials.{$field}"] = $partial ? ['sometimes', ...$fieldRules] : $fieldRules;
-            }
-            foreach ($adapter->settingsRules() as $field => $fieldRules) {
-                $rules["settings.{$field}"] = $fieldRules;
+            foreach (app(ProviderRegistry::class)->get($provider)->fields() as $field) {
+                $rules["{$field->group}.{$field->key}"] = $field->rules($environment, $partial);
             }
         }
 

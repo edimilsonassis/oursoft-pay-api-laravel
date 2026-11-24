@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Providers\Sicoob;
 
+use App\Domain\Payments\Data\ProviderField;
+use App\Domain\Payments\Enums\Environment;
 use App\Domain\Payments\Enums\PaymentMethod;
 use App\Domain\Payments\Enums\Provider;
 use App\Infrastructure\Providers\AbstractProvider;
@@ -29,6 +31,16 @@ class SicoobProvider extends AbstractProvider
         return Provider::Sicoob;
     }
 
+    public function label(): string
+    {
+        return 'Sicoob';
+    }
+
+    public function methods(): array
+    {
+        return [PaymentMethod::Pix, PaymentMethod::Boleto];
+    }
+
     protected function gateways(): array
     {
         return [
@@ -45,23 +57,26 @@ class SicoobProvider extends AbstractProvider
         ]));
     }
 
-    public function credentialRules(): array
+    public function fields(): array
     {
         return [
-            'client_id' => ['required', 'string'],
-            'certificate' => ['nullable', 'string'],
-            'certificate_password' => ['nullable', 'string'],
-            'sandbox_token' => ['nullable', 'string'],
-        ];
-    }
-
-    public function settingsRules(): array
-    {
-        return [
-            'pix_key' => ['nullable', 'string', 'max:77'],
-            'numero_cliente' => ['nullable', 'integer'],
-            'numero_conta_corrente' => ['nullable', 'integer'],
-            'codigo_modalidade' => ['nullable', 'integer'],
+            ProviderField::credential('client_id', 'Client ID', required: true),
+            ProviderField::credential('certificate', 'Certificado (.p12 / .pfx)', 'file',
+                requiredIn: [Environment::Production],
+                description: 'Obrigatório em produção. Em homologação, use o token de sandbox.', accept: '.p12,.pfx,.pem,application/x-pkcs12'),
+            ProviderField::credential('certificate_password', 'Senha do certificado'),
+            ProviderField::credential('sandbox_token', 'Token de sandbox',
+                requiredIn: [Environment::Sandbox], requiredWithout: ['certificate'],
+                description: 'Usado só em homologação, no lugar do certificado.'),
+            ProviderField::setting('pix_key', 'Chave Pix', max: 77,
+                description: 'Sem chave Pix a conta não recebe por Pix.',
+                placeholder: 'CNPJ, e-mail, telefone ou chave aleatória'),
+            ProviderField::setting('numero_cliente', 'Número do cliente', 'integer',
+                description: 'Necessário para boleto.'),
+            ProviderField::setting('numero_conta_corrente', 'Conta corrente', 'integer',
+                description: 'Necessário para boleto.'),
+            ProviderField::setting('codigo_modalidade', 'Código da modalidade', 'integer',
+                description: 'Modalidade de cobrança do boleto. Padrão: 1.', placeholder: '1'),
         ];
     }
 

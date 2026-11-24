@@ -54,6 +54,47 @@ class AccountTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors(['credentials.client_id'], 'error.fields');
     }
 
+    public function test_sicoob_requires_certificate_in_production_and_token_or_certificate_in_sandbox(): void
+    {
+        $this->withKey()->postJson('/v1/accounts', [
+            'provider' => 'sicoob',
+            'environment' => 'production',
+            'name' => 'Sicoob',
+            'credentials' => ['client_id' => 'x', 'sandbox_token' => 'tok'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['credentials.certificate'], 'error.fields');
+
+        $this->withKey()->postJson('/v1/accounts', [
+            'provider' => 'sicoob',
+            'environment' => 'sandbox',
+            'name' => 'Sicoob',
+            'credentials' => ['client_id' => 'x'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['credentials.sandbox_token'], 'error.fields');
+
+        $this->withKey()->postJson('/v1/accounts', [
+            'provider' => 'sicoob',
+            'environment' => 'sandbox',
+            'name' => 'Sicoob',
+            'credentials' => ['client_id' => 'x', 'sandbox_token' => 'tok'],
+        ])->assertCreated();
+    }
+
+    public function test_lists_provider_catalog_with_fields(): void
+    {
+        $response = $this->withKey()->getJson('/v1/providers')->assertOk()
+            ->assertJsonPath('data.0.id', 'efi')
+            ->assertJsonPath('data.0.methods', ['pix', 'boleto', 'credit_card'])
+            ->assertJsonPath('data.1.id', 'sicoob')
+            ->assertJsonPath('data.1.methods', ['pix', 'boleto']);
+
+        $sicoobFields = collect($response->json('data.1.fields'))->keyBy('key');
+        $this->assertSame('credentials', $sicoobFields['certificate']['group']);
+        $this->assertSame('file', $sicoobFields['certificate']['type']);
+        $this->assertSame(['production'], $sicoobFields['certificate']['required_in']);
+        $this->assertSame(['certificate'], $sicoobFields['sandbox_token']['required_without']);
+        $this->assertSame('integer', $sicoobFields['numero_cliente']['type']);
+        $this->assertTrue(collect($response->json('data.0.fields'))->firstWhere('key', 'client_secret')['required']);
+    }
+
     public function test_rejects_invalid_certificate(): void
     {
         $this->withKey()->postJson('/v1/accounts', [

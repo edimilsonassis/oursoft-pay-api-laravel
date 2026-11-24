@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Providers\Efi;
 
+use App\Domain\Payments\Data\ProviderField;
 use App\Domain\Payments\Enums\PaymentMethod;
 use App\Domain\Payments\Enums\Provider;
 use App\Infrastructure\Providers\AbstractProvider;
@@ -31,6 +32,16 @@ class EfiProvider extends AbstractProvider
         return Provider::Efi;
     }
 
+    public function label(): string
+    {
+        return 'Efí';
+    }
+
+    public function methods(): array
+    {
+        return [PaymentMethod::Pix, PaymentMethod::Boleto, PaymentMethod::CreditCard];
+    }
+
     protected function gateways(): array
     {
         return [
@@ -49,21 +60,19 @@ class EfiProvider extends AbstractProvider
         ]));
     }
 
-    public function credentialRules(): array
+    public function fields(): array
     {
         return [
-            'client_id' => ['required', 'string'],
-            'client_secret' => ['required', 'string'],
-            'certificate' => ['nullable', 'string'],
-            'certificate_password' => ['nullable', 'string'],
-        ];
-    }
-
-    public function settingsRules(): array
-    {
-        return [
-            'pix_key' => ['nullable', 'string', 'max:77'],
-            'payee_code' => ['nullable', 'string', 'max:64'],
+            ProviderField::credential('client_id', 'Client ID', required: true),
+            ProviderField::credential('client_secret', 'Client Secret', required: true),
+            ProviderField::credential('certificate', 'Certificado (.p12 / .pfx)', 'file',
+                description: 'Necessário para receber por Pix.', accept: '.p12,.pfx,.pem,application/x-pkcs12'),
+            ProviderField::credential('certificate_password', 'Senha do certificado'),
+            ProviderField::setting('pix_key', 'Chave Pix', max: 77,
+                description: 'Sem chave Pix a conta não recebe por Pix.',
+                placeholder: 'CNPJ, e-mail, telefone ou chave aleatória'),
+            ProviderField::setting('payee_code', 'Identificador de conta (payee_code)', max: 64,
+                description: 'Necessário para receber por cartão de crédito.'),
         ];
     }
 

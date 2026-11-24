@@ -7,4 +7,7 @@ use App\Domain\Payments\Enums\Provider;
 interface ProviderRegistry
 {
     public function get(Provider $provider): PaymentProvider;
+
+    /** @return list<PaymentProvider> */
+    public function all(): array;
 }
